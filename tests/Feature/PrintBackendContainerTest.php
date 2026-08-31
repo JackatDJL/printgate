@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Printing\Contracts\PrintBackend;
-use App\Printing\Exceptions\PrintBackendUnavailable;
+use App\Printing\CupsPrintBackend;
 use App\Printing\FakePrintBackend;
 use App\Printing\Printer;
 use App\Printing\PrinterState;
@@ -13,13 +13,11 @@ use Tests\TestCase;
 
 class PrintBackendContainerTest extends TestCase
 {
-    public function test_default_backend_reports_that_printing_is_unavailable(): void
+    public function test_default_backend_is_the_cups_adapter(): void
     {
         $backend = $this->app->make(PrintBackend::class);
 
-        $this->expectException(PrintBackendUnavailable::class);
-
-        $backend->printers();
+        $this->assertInstanceOf(CupsPrintBackend::class, $backend);
     }
 
     public function test_fake_backend_can_replace_the_application_binding(): void

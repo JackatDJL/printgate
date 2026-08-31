@@ -1,0 +1,8 @@
+printer Office_Printer is idle.  enabled since Sat 30 Aug 2026 09:41:00 AM CEST
+	Description: Main office printer
+	Form mounted:
+	Content types: any
+printer Shipping_Label is disabled since Sat 30 Aug 2026 09:42:00 AM CEST -
+	Description: Shipping labels
+	Form mounted:
+printer Receipt is processing.  enabled since Sat 30 Aug 2026 09:43:00 AM CEST

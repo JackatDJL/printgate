@@ -53,12 +53,12 @@ Legend:
 
 ### M1.1 Discover printers from CUPS
 
-- [ ] Implement a production CUPS adapter.
-- [ ] Discover configured printers.
-- [ ] Parse printer name and basic state.
-- [ ] Handle missing/unavailable CUPS gracefully.
-- [ ] Add parser/unit tests using fixtures.
-- [ ] Add a simple printer list to the dashboard.
+- [x] Implement a production CUPS adapter.
+- [x] Discover configured printers.
+- [x] Parse printer name and basic state.
+- [x] Handle missing/unavailable CUPS gracefully.
+- [x] Add parser/unit tests using fixtures.
+- [x] Add a simple printer list to the dashboard.
 
 ### M1.2 Safe PDF upload
 
