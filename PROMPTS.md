@@ -121,7 +121,7 @@ Implement Milestone 0, Prompt 3 for Printgate: application configuration and saf
 
 Add a dedicated Printgate configuration file and matching .env.example entries for:
 - bind host, default 127.0.0.1;
-- port, default 8787;
+- port, default 5901;
 - maximum upload size;
 - temporary document retention period;
 - authentication mode placeholder, default local;

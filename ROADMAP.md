@@ -28,11 +28,11 @@ Legend:
 
 ### M0.2 Define printing domain boundary
 
-- [ ] Create `app/Printing` or an equivalent isolated module.
-- [ ] Define printer and print-job domain objects.
-- [ ] Define a `PrintBackend` abstraction.
-- [ ] Add a fake backend for automated tests.
-- [ ] Keep process execution out of controllers/UI.
+- [x] Create `app/Printing` or an equivalent isolated module.
+- [x] Define printer and print-job domain objects.
+- [x] Define a `PrintBackend` abstraction.
+- [x] Add a fake backend for automated tests.
+- [x] Keep process execution out of controllers/UI.
 
 ### M0.3 Establish configuration and safety defaults
 
