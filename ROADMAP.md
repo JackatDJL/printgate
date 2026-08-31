@@ -36,11 +36,11 @@ Legend:
 
 ### M0.3 Establish configuration and safety defaults
 
-- [ ] Add Printgate-specific configuration.
-- [ ] Default bind host to loopback.
-- [ ] Configure upload and retention limits.
-- [ ] Document temporary-file storage.
-- [ ] Add tests for configuration defaults.
+- [x] Add Printgate-specific configuration.
+- [x] Default bind host to loopback.
+- [x] Configure upload and retention limits.
+- [x] Document temporary-file storage.
+- [x] Add tests for configuration defaults.
 - [ ] Add an architecture/security note to the repository if implementation decisions diverge from `README.md`.
 
 **Milestone acceptance:** Laravel boots, tests pass, a fake print backend can be injected, and no CUPS-specific process logic leaks into the UI layer.

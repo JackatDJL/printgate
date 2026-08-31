@@ -38,6 +38,15 @@ return [
             'report' => false,
         ],
 
+        'printgate-documents' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/printgate-documents'),
+            'serve' => false,
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

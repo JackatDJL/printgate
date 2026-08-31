@@ -106,7 +106,7 @@ The intended deployment model uses multiple layers.
 The production web server should listen only on loopback, for example:
 
 ```text
-127.0.0.1:8787
+127.0.0.1:5901
 ```
 
 Remote access should normally be provided using Tailscale Serve.
@@ -272,10 +272,10 @@ Expected examples:
 
 ```dotenv
 APP_ENV=production
-APP_URL=http://127.0.0.1:8787
+APP_URL=http://127.0.0.1:5901
 
-PRINTGATE_BIND=127.0.0.1
-PRINTGATE_PORT=8787
+PRINTGATE_BIND_HOST=127.0.0.1
+PRINTGATE_PORT=5901
 
 PRINTGATE_MAX_UPLOAD_MB=50
 PRINTGATE_RETENTION_MINUTES=60
@@ -284,6 +284,10 @@ PRINTGATE_AUTH_MODE=local
 ```
 
 Do not store secrets in version control.
+
+Temporary documents use the `printgate-documents` disk at `storage/app/private/printgate-documents`. It is outside the public web root and is not exposed by Laravel's public storage link.
+
+`PRINTGATE_BIND_HOST` and `PRINTGATE_PORT` are application settings. They do not configure a listener on their own. For local development, pass the host and port explicitly to the server command. Production listener configuration belongs to the production runtime work in Milestone 4.
 
 ## CLI
 
