@@ -9,6 +9,7 @@ use App\Printing\CupsJobState;
 use App\Printing\Exceptions\PrintSubmissionFailed;
 use App\Printing\Exceptions\PrintValidationFailed;
 use App\Printing\FakePrintBackend;
+use App\Printing\PrinterCapabilities;
 use App\Printing\PrintJob;
 use App\Printing\PrintJobState;
 use App\Printing\PrintSubmissionRequest;
@@ -76,6 +77,11 @@ class CancelPrintJobTest extends TestCase
             public function printers(): array
             {
                 return [];
+            }
+
+            public function capabilities(string $printerName): PrinterCapabilities
+            {
+                throw new PrintSubmissionFailed('not used');
             }
 
             public function submit(PrintSubmissionRequest $request): PrintJob

@@ -98,14 +98,14 @@ Legend:
 
 ### M2.1 Printer capabilities
 
-- [ ] Query printer defaults and supported options.
-- [ ] Normalize common capabilities:
+- [x] Query printer defaults and supported options.
+- [x] Normalize common capabilities:
   - paper/media size;
   - duplex/sides;
   - color mode;
   - orientation where available.
-- [ ] Preserve unknown/raw capability data for diagnostics.
-- [ ] Add parser fixtures for multiple printer styles.
+- [x] Preserve unknown/raw capability data for diagnostics.
+- [x] Add parser fixtures for multiple printer styles.
 
 ### M2.2 Common print options
 

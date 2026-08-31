@@ -9,6 +9,7 @@ use App\Printing\Exceptions\PrintSubmissionFailed;
 use App\Printing\Exceptions\PrintValidationFailed;
 use App\Printing\FakePrintBackend;
 use App\Printing\Printer;
+use App\Printing\PrinterCapabilities;
 use App\Printing\PrinterState;
 use App\Printing\PrintJob;
 use App\Printing\PrintJobState;
@@ -72,6 +73,11 @@ class SubmitPendingPrintJobTest extends TestCase
             public function printers(): array
             {
                 return [new Printer('office', 'Office printer', PrinterState::Ready)];
+            }
+
+            public function capabilities(string $printerName): PrinterCapabilities
+            {
+                throw new PrintSubmissionFailed('not used');
             }
 
             public function submit(PrintSubmissionRequest $request): PrintJob

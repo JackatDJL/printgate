@@ -1,0 +1,5 @@
+PageSize/Media Size: Letter *A4 A5 Custom_4x6
+Sides/2-Sided Printing: *one-sided two-sided-long-edge two-sided-short-edge
+ColorModel/Color Model: Gray *RGB
+Orientation: *portrait landscape
+PrinterResolution/Output Resolution: 300dpi *600dpi

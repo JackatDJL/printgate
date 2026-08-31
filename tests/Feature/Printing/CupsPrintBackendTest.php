@@ -40,6 +40,31 @@ class CupsPrintBackendTest extends TestCase
         $this->app->make(PrintBackend::class)->printers();
     }
 
+    public function test_discovers_typed_printer_capabilities_with_an_argument_array_and_stable_locale(): void
+    {
+        $output = file_get_contents(base_path('tests/Fixtures/Cups/capabilities-office.txt'));
+        Process::fake(['*' => Process::result(output: $output)]);
+
+        $capabilities = $this->app->make(PrintBackend::class)->capabilities('Office_Printer');
+
+        $this->assertSame('a4', $capabilities->defaultMediaSize?->value);
+        $this->assertSame(['Custom_4x6'], $capabilities->unknownValues['media']);
+        Process::assertRan(function (PendingProcess $process, ProcessResult $result): bool {
+            return $process->command === ['lpoptions', '-p', 'Office_Printer', '-l']
+                && $process->environment === ['LC_ALL' => 'C', 'LANG' => 'C']
+                && $process->timeout === 5;
+        });
+    }
+
+    public function test_reports_a_backend_error_when_capability_lookup_fails(): void
+    {
+        Process::fake(['*' => Process::result(errorOutput: 'lpoptions: command not found', exitCode: 127)]);
+
+        $this->expectException(PrintBackendUnavailable::class);
+
+        $this->app->make(PrintBackend::class)->capabilities('Office_Printer');
+    }
+
     public function test_reports_a_backend_error_when_the_cups_utility_cannot_start(): void
     {
         Process::fake(['*' => new RuntimeException('Unable to find the "lpstat" command.')]);

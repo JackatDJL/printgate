@@ -13,6 +13,7 @@ final class CupsPrintBackend implements PrintBackend
     public function __construct(
         private readonly Factory $processes,
         private readonly CupsPrinterParser $parser,
+        private readonly CupsPrinterCapabilitiesParser $capabilitiesParser,
         private readonly CupsSubmissionParser $submissionParser,
         private readonly CupsQueueStateParser $queueStateParser,
     ) {}
@@ -58,6 +59,24 @@ final class CupsPrintBackend implements PrintBackend
         }
 
         return new PrintJob($this->submissionParser->parse($result->output()));
+    }
+
+    public function capabilities(string $printerName): PrinterCapabilities
+    {
+        try {
+            $result = $this->processes
+                ->timeout(5)
+                ->env(['LC_ALL' => 'C', 'LANG' => 'C'])
+                ->run(['lpoptions', '-p', $printerName, '-l']);
+        } catch (Throwable $exception) {
+            throw new PrintBackendUnavailable('CUPS printer capabilities could not be started.', previous: $exception);
+        }
+
+        if ($result->failed()) {
+            throw new PrintBackendUnavailable('CUPS printer capabilities lookup failed.');
+        }
+
+        return $this->capabilitiesParser->parse($result->output());
     }
 
     public function jobState(string $backendJobId): CupsJobState

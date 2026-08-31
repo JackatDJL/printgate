@@ -12,6 +12,11 @@ final class UnavailablePrintBackend implements PrintBackend
         throw new PrintBackendUnavailable('The Printgate print backend is not configured.');
     }
 
+    public function capabilities(string $printerName): PrinterCapabilities
+    {
+        throw new PrintBackendUnavailable('The Printgate print backend is not configured.');
+    }
+
     public function submit(PrintSubmissionRequest $request): PrintJob
     {
         throw new PrintBackendUnavailable('The Printgate print backend is not configured.');

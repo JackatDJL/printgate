@@ -23,6 +23,7 @@ final class FakePrintBackend implements PrintBackend
         private readonly array $printers = [],
         private readonly ?PrintJob $returnedJob = null,
         private readonly CupsJobState $returnedJobState = CupsJobState::Active,
+        private readonly array $capabilities = [],
     ) {}
 
     public function printers(): array
@@ -35,6 +36,11 @@ final class FakePrintBackend implements PrintBackend
         $this->submittedRequests[] = $request;
 
         return $this->returnedJob ?? new PrintJob('fake-job-'.count($this->submittedRequests));
+    }
+
+    public function capabilities(string $printerName): PrinterCapabilities
+    {
+        return $this->capabilities[$printerName] ?? new PrinterCapabilities;
     }
 
     /**

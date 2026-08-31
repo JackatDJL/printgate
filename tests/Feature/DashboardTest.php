@@ -8,6 +8,7 @@ use App\Printing\CupsJobState;
 use App\Printing\Exceptions\PrintBackendUnavailable;
 use App\Printing\FakePrintBackend;
 use App\Printing\Printer;
+use App\Printing\PrinterCapabilities;
 use App\Printing\PrinterState;
 use App\Printing\PrintJob;
 use App\Printing\PrintJobState;
@@ -45,6 +46,11 @@ class DashboardTest extends TestCase
         $this->app->instance(PrintBackend::class, new class implements PrintBackend
         {
             public function printers(): array
+            {
+                throw new PrintBackendUnavailable('CUPS is unavailable.');
+            }
+
+            public function capabilities(string $printerName): PrinterCapabilities
             {
                 throw new PrintBackendUnavailable('CUPS is unavailable.');
             }
