@@ -18,13 +18,13 @@ Legend:
 
 ### M0.1 Bootstrap Laravel
 
-- [ ] Create the Laravel application.
-- [ ] Configure Bun/Vite.
-- [ ] Use SQLite for local development.
-- [ ] Add Blade + Livewire.
-- [ ] Add a minimal application shell.
-- [ ] Add basic feature-test infrastructure.
-- [ ] Confirm the app boots and tests pass.
+- [x] Create the Laravel application.
+- [x] Configure Bun/Vite.
+- [x] Use SQLite for local development.
+- [x] Add Blade + Livewire.
+- [x] Add a minimal application shell.
+- [x] Add basic feature-test infrastructure.
+- [x] Confirm the app boots and tests pass.
 
 ### M0.2 Define printing domain boundary
 
