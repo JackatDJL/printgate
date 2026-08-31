@@ -16,4 +16,14 @@ final class UnavailablePrintBackend implements PrintBackend
     {
         throw new PrintBackendUnavailable('The Printgate print backend is not configured.');
     }
+
+    public function jobState(string $backendJobId): CupsJobState
+    {
+        throw new PrintBackendUnavailable('The Printgate print backend is not configured.');
+    }
+
+    public function cancel(string $backendJobId): void
+    {
+        throw new PrintBackendUnavailable('The Printgate print backend is not configured.');
+    }
 }

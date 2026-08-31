@@ -4,6 +4,7 @@ namespace App\Printing;
 
 use App\Printing\Contracts\PrintBackend;
 use App\Printing\Exceptions\PrintBackendUnavailable;
+use App\Printing\Exceptions\PrintSubmissionFailed;
 use Illuminate\Process\Factory;
 use Throwable;
 
@@ -12,6 +13,8 @@ final class CupsPrintBackend implements PrintBackend
     public function __construct(
         private readonly Factory $processes,
         private readonly CupsPrinterParser $parser,
+        private readonly CupsSubmissionParser $submissionParser,
+        private readonly CupsQueueStateParser $queueStateParser,
     ) {}
 
     /**
@@ -41,6 +44,53 @@ final class CupsPrintBackend implements PrintBackend
 
     public function submit(PrintSubmissionRequest $request): PrintJob
     {
-        throw new PrintBackendUnavailable('CUPS print submission is not available yet.');
+        try {
+            $result = $this->processes
+                ->timeout(30)
+                ->env(['LC_ALL' => 'C', 'LANG' => 'C'])
+                ->run(['lp', '-d', $request->printerName, $request->documentPath]);
+        } catch (Throwable) {
+            throw new PrintSubmissionFailed('CUPS print submission could not be started.');
+        }
+
+        if ($result->failed()) {
+            throw new PrintSubmissionFailed('CUPS could not accept the document.');
+        }
+
+        return new PrintJob($this->submissionParser->parse($result->output()));
+    }
+
+    public function jobState(string $backendJobId): CupsJobState
+    {
+        try {
+            $result = $this->processes
+                ->timeout(5)
+                ->env(['LC_ALL' => 'C', 'LANG' => 'C'])
+                ->run(['lpstat', '-W', 'not-completed', '-o', $backendJobId]);
+        } catch (Throwable) {
+            throw new PrintSubmissionFailed('CUPS job state lookup could not be started.');
+        }
+
+        if ($result->failed()) {
+            throw new PrintSubmissionFailed('CUPS job state lookup failed.');
+        }
+
+        return $this->queueStateParser->parse($result->output(), $backendJobId);
+    }
+
+    public function cancel(string $backendJobId): void
+    {
+        try {
+            $result = $this->processes
+                ->timeout(30)
+                ->env(['LC_ALL' => 'C', 'LANG' => 'C'])
+                ->run(['cancel', $backendJobId]);
+        } catch (Throwable) {
+            throw new PrintSubmissionFailed('CUPS cancellation could not be started.');
+        }
+
+        if ($result->failed()) {
+            throw new PrintSubmissionFailed('CUPS could not cancel the job.');
+        }
     }
 }

@@ -62,31 +62,31 @@ Legend:
 
 ### M1.2 Safe PDF upload
 
-- [ ] Add a new-print-job flow.
-- [ ] Accept PDF only.
-- [ ] Validate size and file type.
-- [ ] Generate randomized internal filenames.
-- [ ] Store files outside the public web root.
-- [ ] Persist minimal upload/job metadata.
-- [ ] Add validation and path-safety tests.
+- [x] Add a new-print-job flow.
+- [x] Accept PDF only.
+- [x] Validate size and file type.
+- [x] Generate randomized internal filenames.
+- [x] Store files outside the public web root.
+- [x] Persist minimal upload/job metadata.
+- [x] Add validation and path-safety tests.
 
 ### M1.3 Submit print jobs
 
-- [ ] Select only a printer returned by the CUPS backend.
-- [ ] Submit the stored PDF through the backend.
-- [ ] Use argument-array process execution with no shell interpolation.
-- [ ] Record the returned CUPS job ID.
-- [ ] Handle process failure without losing useful error context.
-- [ ] Add success/failure tests around the backend boundary.
+- [x] Select only a printer returned by the CUPS backend.
+- [x] Submit the stored PDF through the backend.
+- [x] Use argument-array process execution with no shell interpolation.
+- [x] Record the returned CUPS job ID.
+- [x] Handle process failure without losing useful error context.
+- [x] Add success/failure tests around the backend boundary.
 
 ### M1.4 Basic job page and cancellation
 
-- [ ] List recent Printgate jobs.
-- [ ] Show submitted/failed/cancelled state.
-- [ ] Query CUPS for active job state where practical.
-- [ ] Allow cancellation of a Printgate-owned job.
-- [ ] Never expose arbitrary CUPS job cancellation.
-- [ ] Add authorization/ownership hooks even if only one user exists initially.
+- [x] List recent Printgate jobs.
+- [x] Show submitted/failed/cancelled state.
+- [x] Query CUPS for active job state where practical.
+- [x] Allow cancellation of a Printgate-owned job.
+- [x] Never expose arbitrary CUPS job cancellation.
+- [x] Add authorization/ownership hooks even if only one user exists initially.
 
 **Milestone acceptance:** from the local web UI, a PDF can be uploaded, sent to a selected CUPS printer, seen in Printgate's job history, and cancelled when CUPS still allows it.
 
