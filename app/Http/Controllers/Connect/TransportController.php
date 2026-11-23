@@ -9,8 +9,8 @@ use App\Models\ConnectSite;
 use App\Printing\PrintgateSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TransportController extends Controller
@@ -32,17 +32,19 @@ class TransportController extends Controller
         ])->save();
 
         $jobs = $site->connectPrintJobs()
-            ->whereIn('state', [ConnectPrintJobState::Queued->value, ConnectPrintJobState::Submitting->value])
+            ->whereIn('state', [ConnectPrintJobState::Queued->value, ConnectPrintJobState::Submitting->value, ConnectPrintJobState::Submitted->value])
             ->where('expires_at', '>', now())
+            ->orderByRaw('case when state = ? then 1 else 0 end', [ConnectPrintJobState::Submitted->value])
             ->oldest('created_at')
             ->limit(20)
-            ->get(['id', 'printer_name', 'sha256', 'size', 'expires_at']);
+            ->get(['id', 'printer_name', 'sha256', 'size', 'expires_at', 'state']);
 
         return response()->json(['jobs' => $jobs->map(fn (ConnectPrintJob $job): array => [
             'id' => $job->id,
             'printer' => $job->printer_name,
             'sha256' => $job->sha256,
             'size' => $job->size,
+            'state' => $job->state->value,
             'expires_at' => $job->expires_at->toIso8601String(),
         ])->values()])->header('Cache-Control', 'no-store');
     }

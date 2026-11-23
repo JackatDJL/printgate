@@ -1,21 +1,24 @@
 services:
   hub:
+    image: printgate-connect-hub:local
     build:
       context: ..
       dockerfile: deploy/Dockerfile
     restart: unless-stopped
-    environment:
+    environment: &hub-environment
       APP_ENV: production
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY:?Set APP_KEY in the deployment environment}
       APP_URL: ${APP_URL:?Set APP_URL to the public HTTPS URL}
       PRINTGATE_ROLE: hub
+      PRINTGATE_TRUSTED_PROXIES: ${PRINTGATE_TRUSTED_PROXIES:?Set the reverse proxy source IP or CIDR}
+      SESSION_SECURE_COOKIE: "true"
       DB_CONNECTION: sqlite
       DB_DATABASE: /var/lib/printgate/database.sqlite
       LOG_CHANNEL: stderr
     ports:
       - "127.0.0.1:${HUB_PORT:-8080}:80"
-    volumes:
+    volumes: &hub-volumes
       - hub-database:/var/lib/printgate
       - hub-private-storage:/var/www/html/storage/app/private
     healthcheck:
@@ -24,6 +27,18 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+
+  scheduler:
+    image: printgate-connect-hub:local
+    restart: unless-stopped
+    depends_on:
+      hub:
+        condition: service_healthy
+    environment: *hub-environment
+    volumes: *hub-volumes
+    entrypoint: []
+    user: www-data
+    command: ["php", "artisan", "schedule:work", "--no-interaction"]
 
 volumes:
   hub-database:

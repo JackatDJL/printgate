@@ -15,6 +15,7 @@ class ConnectSitePairerTest extends TestCase
 
     public function test_pairs_after_hub_owner_confirms_and_saves_credential_privately(): void
     {
+        $this->app->useStoragePath(sys_get_temp_dir().'/printgate-test-'.bin2hex(random_bytes(8)));
         Http::preventStrayRequests();
         Http::fake([
             'https://hub.test/api/connect/pairings' => Http::response([

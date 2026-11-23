@@ -8,6 +8,5 @@ class ConnectSiteReceipt extends Model
 {
     protected $table = 'connect_site_agent_receipts';
 
-    protected $connection = ReceiptDatabase::CONNECTION;
-
+    protected $fillable = ['state', 'backend_job_id'];
 }

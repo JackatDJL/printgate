@@ -10,3 +10,9 @@ public/build
 public/hot
 storage/logs/*.log
 tests
+storage/app/private
+storage/app/public
+storage/framework/cache/data
+storage/framework/sessions
+storage/framework/views
+database/*.sqlite*

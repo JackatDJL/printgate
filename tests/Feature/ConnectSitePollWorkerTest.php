@@ -5,11 +5,11 @@ namespace Tests\Feature;
 use App\Connect\SiteAgent\ConnectSiteReceipt;
 use App\Connect\SiteAgent\CredentialStore;
 use App\Connect\SiteAgent\PollWorker;
-use App\Connect\SiteAgent\ReceiptDatabase;
+use App\Printing\Contracts\PrintBackend;
 use App\Printing\FakePrintBackend;
-use App\Printing\PrintJob;
 use App\Printing\Printer;
 use App\Printing\PrinterState;
+use App\Printing\PrintJob;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -21,8 +21,8 @@ class ConnectSitePollWorkerTest extends TestCase
 
     public function test_valid_allowlisted_job_is_submitted_once_and_temporary_document_is_removed(): void
     {
+        $this->app->useStoragePath(sys_get_temp_dir().'/printgate-test-'.bin2hex(random_bytes(8)));
         Http::preventStrayRequests();
-        ReceiptDatabase::configure();
         ConnectSiteReceipt::query()->where('site_id', 'site-test-worker')->delete();
         $this->app->make(CredentialStore::class)->save('https://hub.test', str_repeat('d', 64), 'site-test-worker', ['office']);
         $pdf = '%PDF-1.7 test content';
@@ -38,8 +38,9 @@ class ConnectSitePollWorkerTest extends TestCase
             [new Printer('office', 'Office printer', PrinterState::Ready)],
             new PrintJob('cups-42'),
         );
-        $this->app->instance(\App\Printing\Contracts\PrintBackend::class, $backend);
+        $this->app->instance(PrintBackend::class, $backend);
 
+        $this->app->make(PollWorker::class)->poll();
         $this->app->make(PollWorker::class)->poll();
 
         $this->assertCount(1, $backend->submittedRequests());

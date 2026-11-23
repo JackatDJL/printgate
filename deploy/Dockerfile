@@ -14,6 +14,7 @@ FROM php:8.4-apache
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl libonig-dev libsqlite3-dev unzip \
     && docker-php-ext-install mbstring opcache pdo_sqlite \
+    && printf '%s\n' 'upload_max_filesize=50M' 'post_max_size=52M' > /usr/local/etc/php/conf.d/printgate-uploads.ini \
     && a2enmod headers rewrite \
     && sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf \
     && { \

@@ -55,8 +55,14 @@ new #[Layout('components.layouts.app')] class extends Component
         ];
     }
 
+    public function mount(): void
+    {
+        abort_if(config('printgate.role') === 'hub', 404);
+    }
+
     public function save(): void
     {
+        abort_if(config('printgate.role') === 'hub', 404);
         $user = Auth::user();
 
         abort_unless($user instanceof User, 403);

@@ -12,7 +12,9 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [SessionController::class, 'destroy'])->name('logout');
-    Route::view('/', 'dashboard')->name('dashboard');
+    Route::get('/', fn () => config('printgate.role') === 'hub'
+        ? redirect()->route('connect.index')
+        : view('dashboard'))->name('dashboard');
     Route::livewire('/print-jobs/new', 'pages::print-jobs.create')->name('print-jobs.create');
 });
 

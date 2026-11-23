@@ -4,10 +4,9 @@ namespace App\Connect\SiteAgent;
 
 use App\Printing\Contracts\PrintBackend;
 use App\Printing\CupsJobState;
-use App\Printing\PrintSubmissionRequest;
 use App\Printing\Printer;
+use App\Printing\PrintSubmissionRequest;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Throwable;
 
@@ -17,9 +16,7 @@ final class PollWorker
         private readonly CredentialStore $store,
         private readonly HubClient $hub,
         private readonly PrintBackend $backend,
-    ) {
-        ReceiptDatabase::configure();
-    }
+    ) {}
 
     public function poll(): int
     {
@@ -58,10 +55,11 @@ final class PollWorker
         }
 
         $now = now();
-        DB::connection(ReceiptDatabase::CONNECTION)->table('connect_site_agent_receipts')->insertOrIgnore([
+        $initialState = ($job['state'] ?? 'queued') === 'queued' ? 'queued' : 'uncertain';
+        DB::table('connect_site_agent_receipts')->insertOrIgnore([
             'site_id' => $configuration['site_id'],
             'remote_job_id' => $jobId,
-            'state' => 'queued',
+            'state' => $initialState,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -90,6 +88,7 @@ final class PollWorker
 
                 return;
             }
+            $this->report($configuration, $jobId, 'submitting');
             $this->submit($configuration, $job, $printerName, $receipt);
         }
 
@@ -105,7 +104,7 @@ final class PollWorker
             $jobId = $receipt->remote_job_id;
             $baseUrl = $configuration['base_url'];
             $response = $this->hub->request($baseUrl, $configuration['credential'])
-                ->get(rtrim($baseUrl, '/').'/api/connect/v1/jobs/'.rawurlencode($jobId).'/document'));
+                ->get(rtrim($baseUrl, '/').'/api/connect/v1/jobs/'.rawurlencode($jobId).'/document');
             if ($response->status() >= 300 && $response->status() < 400) {
                 throw new RuntimeException('The Printgate Hub redirected a document request.');
             }

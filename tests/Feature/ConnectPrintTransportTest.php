@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class ConnectPrintTransportTest extends TestCase
@@ -21,7 +22,7 @@ class ConnectPrintTransportTest extends TestCase
         parent::setUp();
         config(['printgate.role' => 'hub', 'printgate.connect.max_active_jobs_per_owner' => 10]);
         Storage::fake('printgate-documents');
-        $this->withServerVariables(['HTTPS' => 'on']);
+        URL::forceScheme('https');
     }
 
     public function test_poll_reports_printers_and_redelivers_the_same_queued_and_submitting_job_id(): void
@@ -53,7 +54,7 @@ class ConnectPrintTransportTest extends TestCase
         $this->asSite($otherCredential)->get("/api/connect/v1/jobs/{$job->id}/document")->assertNotFound();
         $this->asSite($otherCredential)->postJson("/api/connect/v1/jobs/{$job->id}/status", ['state' => 'submitted'])->assertNotFound();
         $response = $this->asSite($credential)->get("/api/connect/v1/jobs/{$job->id}/document");
-        $response->assertOk()->assertHeader('Content-Type', 'application/pdf')->assertSee('%PDF-1.4 content', false);
+        $response->assertOk()->assertHeader('Content-Type', 'application/pdf')->assertStreamedContent('%PDF-1.4 content');
 
         $this->actingAs($site->owner)->delete(route('connect.sites.revoke', $site));
         $this->asSite($credential)->postJson('/api/connect/v1/poll', ['protocol' => 1, 'printers' => []])->assertUnauthorized();

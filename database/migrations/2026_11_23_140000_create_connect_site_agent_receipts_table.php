@@ -3,14 +3,12 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use App\Connect\SiteAgent\ReceiptDatabase;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        ReceiptDatabase::configure();
-        Schema::connection(ReceiptDatabase::CONNECTION)->create('connect_site_agent_receipts', function (Blueprint $table) {
+        Schema::create('connect_site_agent_receipts', function (Blueprint $table) {
             $table->id();
             $table->string('site_id', 64);
             $table->string('remote_job_id', 128);
@@ -23,7 +21,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        ReceiptDatabase::configure();
-        Schema::connection(ReceiptDatabase::CONNECTION)->dropIfExists('connect_site_agent_receipts');
+        Schema::dropIfExists('connect_site_agent_receipts');
     }
 };
