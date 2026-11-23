@@ -25,11 +25,18 @@ class ConnectSite extends Model
         return $this->hasMany(ConnectPairingClaim::class, 'site_id');
     }
 
+    public function connectPrintJobs(): HasMany
+    {
+        return $this->hasMany(ConnectPrintJob::class, 'site_id');
+    }
+
     protected function casts(): array
     {
         return [
             'credential_issued_at' => 'datetime',
             'revoked_at' => 'datetime',
+            'reported_printers' => 'array',
+            'last_poll_at' => 'datetime',
         ];
     }
 }

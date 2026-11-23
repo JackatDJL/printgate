@@ -15,6 +15,10 @@ return [
         'retention_minutes' => env('PRINTGATE_RETENTION_MINUTES', 60),
     ],
 
+    'connect' => [
+        'max_active_jobs_per_owner' => env('PRINTGATE_CONNECT_MAX_ACTIVE_JOBS', 10),
+    ],
+
     'authentication' => [
         'mode' => env('PRINTGATE_AUTH_MODE', 'local'),
     ],

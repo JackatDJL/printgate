@@ -15,7 +15,7 @@ class PairingController extends Controller
     public function index(Request $request): View
     {
         return view('connect.index', [
-            'sites' => $request->user()->connectSites()->latest()->get(),
+            'sites' => $request->user()->connectSites()->with(['connectPrintJobs' => fn ($query) => $query->latest()->limit(10)])->latest()->get(),
             'claims' => $request->user()->connectPairingClaims()->whereNull('confirmed_at')->where('expires_at', '>', now())->latest()->get(),
             'invitationToken' => $request->session()->get('connect_invitation_token'),
         ]);

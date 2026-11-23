@@ -48,6 +48,36 @@
                         </form>
                     @endunless
                 </article>
+                @unless ($site->revoked_at)
+                    <form method="POST" action="{{ route('connect.sites.jobs.store', $site) }}" enctype="multipart/form-data" class="mt-4 space-y-3 rounded border border-stone-200 p-4">
+                        @csrf
+                        <label class="block">Printer
+                            <select name="printer_name" required class="mt-1 block w-full rounded border-stone-300">
+                                <option value="">Choose a printer</option>
+                                @foreach ($site->reported_printers ?? [] as $printer)
+                                    <option value="{{ $printer['name'] }}">{{ $printer['display_name'] }} ({{ ucfirst($printer['state']) }})</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <label class="block">PDF document
+                            <input type="file" name="document" accept="application/pdf,.pdf" required class="mt-1 block w-full">
+                        </label>
+                        @error('printer_name')<p class="text-sm text-red-700">{{ $message }}</p>@enderror
+                        @error('document')<p class="text-sm text-red-700">{{ $message }}</p>@enderror
+                        @if (($site->reported_printers ?? []) === [])
+                            <p class="text-sm text-stone-600">No printers reported yet. This site must poll the hub before you can queue a job.</p>
+                        @endif
+                        <button type="submit" @disabled(($site->reported_printers ?? []) === []) class="rounded-md border border-stone-300 px-3 py-2 text-sm disabled:opacity-50">Queue print job</button>
+                    </form>
+                    @if ($site->connectPrintJobs->isNotEmpty())
+                        <div class="mt-3 space-y-2">
+                            <h3 class="font-medium">Recent jobs</h3>
+                            @foreach ($site->connectPrintJobs as $job)
+                                <p class="text-sm">{{ $job->original_filename }} → {{ $job->printer_name }} · {{ str_replace('_', ' ', $job->state->value) }}</p>
+                            @endforeach
+                        </div>
+                    @endif
+                @endunless
             @empty
                 <p>No sites paired yet.</p>
             @endforelse
