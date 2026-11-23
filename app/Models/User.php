@@ -23,6 +23,21 @@ class User extends Authenticatable
         return $this->hasMany(PrintJob::class);
     }
 
+    public function connectSites(): HasMany
+    {
+        return $this->hasMany(ConnectSite::class, 'owner_id');
+    }
+
+    public function connectInvitations(): HasMany
+    {
+        return $this->hasMany(ConnectInvitation::class, 'owner_id');
+    }
+
+    public function connectPairingClaims(): HasMany
+    {
+        return $this->hasMany(ConnectPairingClaim::class, 'owner_id');
+    }
+
     /**
      * Get the attributes that should be cast.
      *

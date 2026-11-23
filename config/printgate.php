@@ -2,6 +2,8 @@
 
 return [
 
+    'role' => env('PRINTGATE_ROLE', 'local'),
+
     'bind' => [
         'host' => env('PRINTGATE_BIND_HOST', '127.0.0.1'),
         'port' => env('PRINTGATE_PORT', 5901),
