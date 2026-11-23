@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\PrintJob as StoredPrintJob;
+use App\Models\User;
 use App\Printing\Contracts\PrintBackend;
 use App\Printing\CupsJobState;
 use App\Printing\Exceptions\PrintSubmissionFailed;
@@ -33,7 +34,7 @@ class SubmitPendingPrintJobTest extends TestCase
         );
         $this->app->instance(PrintBackend::class, $backend);
 
-        $submittedJob = $this->app->make(SubmitPendingPrintJob::class)->submit($job->id, 'office');
+        $submittedJob = $this->app->make(SubmitPendingPrintJob::class)->submit($job->user, $job->id, 'office');
 
         $this->assertSame(PrintJobState::Submitted, $submittedJob->state);
         $this->assertSame('office', $submittedJob->printer_name);
@@ -57,7 +58,7 @@ class SubmitPendingPrintJobTest extends TestCase
         $this->expectExceptionMessage('not currently available');
 
         try {
-            $this->app->make(SubmitPendingPrintJob::class)->submit($job->id, 'stale-printer');
+            $this->app->make(SubmitPendingPrintJob::class)->submit($job->user, $job->id, 'stale-printer');
         } finally {
             $this->assertSame(PrintJobState::Pending, $job->refresh()->state);
             $this->assertSame([], $backend->submittedRequests());
@@ -96,7 +97,7 @@ class SubmitPendingPrintJobTest extends TestCase
             }
         });
 
-        $failedJob = $this->app->make(SubmitPendingPrintJob::class)->submit($job->id, 'office');
+        $failedJob = $this->app->make(SubmitPendingPrintJob::class)->submit($job->user, $job->id, 'office');
 
         $this->assertSame(PrintJobState::Failed, $failedJob->state);
         $this->assertSame('CUPS could not accept the document.', $failedJob->failure_message);
@@ -115,13 +116,13 @@ class SubmitPendingPrintJobTest extends TestCase
         $this->app->instance(PrintBackend::class, $backend);
         $service = $this->app->make(SubmitPendingPrintJob::class);
 
-        $service->submit($job->id, 'office');
+        $service->submit($job->user, $job->id, 'office');
 
         $this->expectException(PrintValidationFailed::class);
         $this->expectExceptionMessage('no longer pending');
 
         try {
-            $service->submit($job->id, 'office');
+            $service->submit($job->user, $job->id, 'office');
         } finally {
             $this->assertCount(1, $backend->submittedRequests());
         }
@@ -131,17 +132,34 @@ class SubmitPendingPrintJobTest extends TestCase
     {
         Storage::fake('printgate-documents');
         $job = StoredPrintJob::factory()->create([
+            'user_id' => User::factory(),
             'state' => PrintJobState::Pending,
             'document_path' => '/tmp/untrusted.pdf',
         ]);
         $backend = new FakePrintBackend([new Printer('office', 'Office printer', PrinterState::Ready)]);
         $this->app->instance(PrintBackend::class, $backend);
 
-        $failedJob = $this->app->make(SubmitPendingPrintJob::class)->submit($job->id, 'office');
+        $failedJob = $this->app->make(SubmitPendingPrintJob::class)->submit($job->user, $job->id, 'office');
 
         $this->assertSame(PrintJobState::Failed, $failedJob->state);
         $this->assertSame('CUPS could not accept the document.', $failedJob->failure_message);
         $this->assertSame([], $backend->submittedRequests());
+    }
+
+    public function test_cannot_submit_another_accounts_job(): void
+    {
+        Storage::fake('printgate-documents');
+        $job = $this->createPendingJob();
+        $backend = new FakePrintBackend([new Printer('office', 'Office printer', PrinterState::Ready)]);
+        $this->app->instance(PrintBackend::class, $backend);
+
+        try {
+            $this->app->make(SubmitPendingPrintJob::class)->submit(User::factory()->create(), $job->id, 'office');
+            $this->fail('An account submitted a job owned by someone else.');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            $this->assertSame(PrintJobState::Pending, $job->refresh()->state);
+            $this->assertSame([], $backend->submittedRequests());
+        }
     }
 
     private function createPendingJob(): StoredPrintJob
@@ -150,6 +168,7 @@ class SubmitPendingPrintJobTest extends TestCase
         Storage::disk('printgate-documents')->put($documentPath, '%PDF-1.4');
 
         return StoredPrintJob::factory()->create([
+            'user_id' => User::factory(),
             'state' => PrintJobState::Pending,
             'document_path' => $documentPath,
         ]);

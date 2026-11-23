@@ -3,6 +3,7 @@
 namespace App\Printing;
 
 use App\Models\PrintJob as StoredPrintJob;
+use App\Models\User;
 use App\Printing\Contracts\PrintBackend;
 use App\Printing\Exceptions\PrintSubmissionFailed;
 use App\Printing\Exceptions\PrintValidationFailed;
@@ -12,10 +13,9 @@ final class CancelPrintJob
 {
     public function __construct(private readonly PrintBackend $printBackend) {}
 
-    public function cancel(string $jobId): StoredPrintJob
+    public function cancel(User $user, string $jobId): StoredPrintJob
     {
-        // Milestone 3 can scope this lookup to the authenticated job owner.
-        $job = StoredPrintJob::query()->findOrFail($jobId);
+        $job = $user->printJobs()->findOrFail($jobId);
 
         if (in_array($job->state, [PrintJobState::Cancelled, PrintJobState::CompletedOrGone], true)) {
             return $job;

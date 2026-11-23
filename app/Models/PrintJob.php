@@ -8,12 +8,18 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable(['state', 'printer_name', 'original_filename', 'document_path', 'backend_job_id', 'failure_message'])]
 class PrintJob extends Model
 {
     /** @use HasFactory<PrintJobFactory> */
     use HasFactory, HasUlids;
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     /**
      * @return array<string, string>

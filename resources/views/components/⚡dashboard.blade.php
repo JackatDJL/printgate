@@ -1,12 +1,14 @@
 <?php
 
 use App\Models\PrintJob;
+use App\Models\User;
 use App\Printing\CancelPrintJob;
 use App\Printing\Contracts\PrintBackend;
 use App\Printing\Exceptions\PrintBackendUnavailable;
 use App\Printing\Exceptions\PrintSubmissionFailed;
 use App\Printing\Exceptions\PrintValidationFailed;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 new class extends Component
@@ -48,7 +50,11 @@ new class extends Component
         $this->jobActionError = null;
 
         try {
-            $cancelPrintJob->cancel($jobId);
+            $user = Auth::user();
+
+            abort_unless($user instanceof User, 403);
+
+            $cancelPrintJob->cancel($user, $jobId);
         } catch (ModelNotFoundException) {
             $this->jobActionError = 'The selected print job could not be found.';
         } catch (PrintValidationFailed|PrintSubmissionFailed $exception) {
@@ -60,7 +66,11 @@ new class extends Component
 
     private function loadJobs(): void
     {
-        $this->jobs = PrintJob::query()
+        $user = Auth::user();
+
+        abort_unless($user instanceof User, 403);
+
+        $this->jobs = $user->printJobs()
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->limit(10)

@@ -3,6 +3,7 @@
 namespace App\Printing;
 
 use App\Models\PrintJob as StoredPrintJob;
+use App\Models\User;
 use App\Printing\Contracts\PrintBackend;
 use App\Printing\Exceptions\PrintBackendUnavailable;
 use App\Printing\Exceptions\PrintSubmissionFailed;
@@ -17,15 +18,16 @@ final class SubmitPendingPrintJob
         private readonly PrintgateSettings $settings,
     ) {}
 
-    public function submit(string $jobId, string $printerName): StoredPrintJob
+    public function submit(User $user, string $jobId, string $printerName): StoredPrintJob
     {
-        $job = StoredPrintJob::query()->findOrFail($jobId);
+        $job = $user->printJobs()->findOrFail($jobId);
         $printerName = trim($printerName);
 
         $this->ensurePrinterIsAvailable($printerName);
 
         $claimed = StoredPrintJob::query()
             ->whereKey($job->id)
+            ->whereBelongsTo($user)
             ->where('state', PrintJobState::Pending->value)
             ->update([
                 'state' => PrintJobState::Submitting->value,

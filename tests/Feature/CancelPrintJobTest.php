@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\PrintJob as StoredPrintJob;
+use App\Models\User;
 use App\Printing\CancelPrintJob;
 use App\Printing\Contracts\PrintBackend;
 use App\Printing\CupsJobState;
@@ -24,13 +25,14 @@ class CancelPrintJobTest extends TestCase
     public function test_cancels_a_printgate_owned_active_job(): void
     {
         $job = StoredPrintJob::factory()->create([
+            'user_id' => User::factory(),
             'state' => PrintJobState::Submitted,
             'backend_job_id' => 'office-42',
         ]);
         $backend = new FakePrintBackend(returnedJobState: CupsJobState::Active);
         $this->app->instance(PrintBackend::class, $backend);
 
-        $cancelledJob = $this->app->make(CancelPrintJob::class)->cancel($job->id);
+        $cancelledJob = $this->app->make(CancelPrintJob::class)->cancel($job->user, $job->id);
 
         $this->assertSame(PrintJobState::Cancelled, $cancelledJob->state);
         $this->assertNull($cancelledJob->failure_message);
@@ -45,7 +47,7 @@ class CancelPrintJobTest extends TestCase
         $this->expectException(ModelNotFoundException::class);
 
         try {
-            $this->app->make(CancelPrintJob::class)->cancel('01J00000000000000000000000');
+            $this->app->make(CancelPrintJob::class)->cancel(User::factory()->create(), '01J00000000000000000000000');
         } finally {
             $this->assertSame([], $backend->cancelledBackendJobIds());
         }
@@ -54,13 +56,14 @@ class CancelPrintJobTest extends TestCase
     public function test_marks_a_completed_or_absent_cups_job_without_attempting_cancellation(): void
     {
         $job = StoredPrintJob::factory()->create([
+            'user_id' => User::factory(),
             'state' => PrintJobState::Submitted,
             'backend_job_id' => 'office-42',
         ]);
         $backend = new FakePrintBackend(returnedJobState: CupsJobState::CompletedOrGone);
         $this->app->instance(PrintBackend::class, $backend);
 
-        $result = $this->app->make(CancelPrintJob::class)->cancel($job->id);
+        $result = $this->app->make(CancelPrintJob::class)->cancel($job->user, $job->id);
 
         $this->assertSame(PrintJobState::CompletedOrGone, $result->state);
         $this->assertSame([], $backend->cancelledBackendJobIds());
@@ -69,6 +72,7 @@ class CancelPrintJobTest extends TestCase
     public function test_keeps_the_job_submitted_when_cups_state_lookup_fails(): void
     {
         $job = StoredPrintJob::factory()->create([
+            'user_id' => User::factory(),
             'state' => PrintJobState::Submitted,
             'backend_job_id' => 'office-42',
         ]);
@@ -104,7 +108,7 @@ class CancelPrintJobTest extends TestCase
         $this->expectExceptionMessage('CUPS job state lookup failed.');
 
         try {
-            $this->app->make(CancelPrintJob::class)->cancel($job->id);
+            $this->app->make(CancelPrintJob::class)->cancel($job->user, $job->id);
         } finally {
             $job->refresh();
             $this->assertSame(PrintJobState::Submitted, $job->state);
@@ -116,21 +120,42 @@ class CancelPrintJobTest extends TestCase
     public function test_repeats_cancellation_without_reaching_cups_when_the_job_is_already_cancelled(): void
     {
         $job = StoredPrintJob::factory()->create([
+            'user_id' => User::factory(),
             'state' => PrintJobState::Cancelled,
             'backend_job_id' => 'office-42',
         ]);
         $backend = new FakePrintBackend;
         $this->app->instance(PrintBackend::class, $backend);
 
-        $result = $this->app->make(CancelPrintJob::class)->cancel($job->id);
+        $result = $this->app->make(CancelPrintJob::class)->cancel($job->user, $job->id);
 
         $this->assertSame(PrintJobState::Cancelled, $result->state);
         $this->assertSame([], $backend->cancelledBackendJobIds());
     }
 
+    public function test_cannot_cancel_another_accounts_job(): void
+    {
+        $job = StoredPrintJob::factory()->create([
+            'user_id' => User::factory(),
+            'state' => PrintJobState::Submitted,
+            'backend_job_id' => 'office-42',
+        ]);
+        $backend = new FakePrintBackend;
+        $this->app->instance(PrintBackend::class, $backend);
+
+        try {
+            $this->app->make(CancelPrintJob::class)->cancel(User::factory()->create(), $job->id);
+            $this->fail('An account cancelled a job owned by someone else.');
+        } catch (ModelNotFoundException) {
+            $this->assertSame(PrintJobState::Submitted, $job->refresh()->state);
+            $this->assertSame([], $backend->cancelledBackendJobIds());
+        }
+    }
+
     public function test_rejects_an_invalid_stored_cups_identifier_without_passing_it_to_the_backend(): void
     {
         $job = StoredPrintJob::factory()->create([
+            'user_id' => User::factory(),
             'state' => PrintJobState::Submitted,
             'backend_job_id' => 'office-42; cancel another-7',
         ]);
@@ -140,7 +165,7 @@ class CancelPrintJobTest extends TestCase
         $this->expectException(PrintValidationFailed::class);
 
         try {
-            $this->app->make(CancelPrintJob::class)->cancel($job->id);
+            $this->app->make(CancelPrintJob::class)->cancel($job->user, $job->id);
         } finally {
             $this->assertSame([], $backend->cancelledBackendJobIds());
         }
