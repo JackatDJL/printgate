@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  laravel:
+    name: Laravel tests and assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm install --ignore-scripts
+      - run: npm run build
+      - name: Run PHPUnit
+        run: |
+          export APP_KEY="base64:$(openssl rand -base64 32)"
+          vendor/bin/phpunit
+
+  docker:
+    name: Docker build and hub smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_URL: https://printgate.example.invalid
+      PRINTGATE_TRUSTED_PROXIES: 127.0.0.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare ephemeral application key
+        run: |
+          key="base64:$(openssl rand -base64 32)"
+          echo "::add-mask::$key"
+          echo "APP_KEY=$key" >> "$GITHUB_ENV"
+      - name: Validate Compose and entrypoint
+        run: |
+          docker compose -f deploy/compose.yaml config --quiet
+          sh -n deploy/entrypoint.sh
+      - name: Build hub image
+        run: docker compose -f deploy/compose.yaml build hub
+      - name: Start and verify the hub
+        run: |
+          docker compose -f deploy/compose.yaml up --detach --wait --wait-timeout 90
+          curl --fail --silent --show-error http://127.0.0.1:8080/up > /dev/null
+          curl --fail --silent --show-error http://127.0.0.1:8080/login > /dev/null
+          docker compose -f deploy/compose.yaml exec -T --user www-data hub php artisan migrate:status --no-interaction
+          docker compose -f deploy/compose.yaml exec -T scheduler php artisan connect:cleanup-print-jobs --no-interaction
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose -f deploy/compose.yaml logs --no-color
+      - name: Remove smoke test resources
+        if: always()
+        run: docker compose -f deploy/compose.yaml down --volumes
