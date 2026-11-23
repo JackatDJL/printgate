@@ -1,0 +1,30 @@
+services:
+  hub:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?Set APP_KEY in the deployment environment}
+      APP_URL: ${APP_URL:?Set APP_URL to the public HTTPS URL}
+      PRINTGATE_ROLE: hub
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/lib/printgate/database.sqlite
+      LOG_CHANNEL: stderr
+    ports:
+      - "127.0.0.1:${HUB_PORT:-8080}:80"
+    volumes:
+      - hub-database:/var/lib/printgate
+      - hub-private-storage:/var/www/html/storage/app/private
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1/up >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  hub-database:
+  hub-private-storage:

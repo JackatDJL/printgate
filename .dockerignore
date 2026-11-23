@@ -1,0 +1,12 @@
+.git
+.agents
+.ai
+.env
+.env.*
+!.env.example
+node_modules
+vendor
+public/build
+public/hot
+storage/logs/*.log
+tests
