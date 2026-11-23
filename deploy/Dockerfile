@@ -31,7 +31,8 @@ WORKDIR /var/www/html
 
 COPY composer.json composer.lock ./
 COPY . .
-RUN composer install \
+RUN mkdir -p /var/lib/printgate storage/app/private storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache \
+    && composer install \
     --no-dev \
     --no-interaction \
     --no-progress \
@@ -42,7 +43,6 @@ COPY --from=frontend /build/public/build ./public/build
 COPY deploy/entrypoint.sh /usr/local/bin/printgate-entrypoint
 
 RUN chmod 0755 /usr/local/bin/printgate-entrypoint \
-    && mkdir -p /var/lib/printgate storage/app/private storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 80

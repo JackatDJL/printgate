@@ -125,7 +125,7 @@ class ConnectPrintTransportTest extends TestCase
     private function site(): array
     {
         $owner = User::factory()->create();
-        $credential = str_repeat((string) random_int(0, 9), 64);
+        $credential = str_pad((string) $owner->id, 64, '0', STR_PAD_LEFT);
         $site = $owner->connectSites()->create([
             'name' => 'Office',
             'credential_digest' => hash('sha256', $credential),
