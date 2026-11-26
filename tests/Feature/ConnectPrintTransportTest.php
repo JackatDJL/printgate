@@ -44,6 +44,35 @@ class ConnectPrintTransportTest extends TestCase
         $this->assertSame([['name' => 'office', 'display_name' => 'Office', 'state' => 'idle']], $site->fresh()->reported_printers);
     }
 
+    public function test_poll_rotates_submitted_jobs_through_the_bounded_response(): void
+    {
+        [$site, $credential] = $this->site();
+        $this->freezeTime();
+        $jobs = collect(range(1, 21))->map(function () use ($site): ConnectPrintJob {
+            $job = $this->job($site);
+            $job->update(['state' => ConnectPrintJobState::Submitted]);
+
+            return $job;
+        })->sortBy('id')->values();
+        $oldestJob = $jobs->first();
+        $lastJob = $jobs->last();
+        $payload = ['protocol' => 1, 'printers' => []];
+
+        $firstPoll = $this->asSite($credential)->postJson('/api/connect/v1/poll', $payload)
+            ->assertOk()->assertJsonCount(20, 'jobs');
+        $this->assertNotContains($lastJob->id, array_column($firstPoll->json('jobs'), 'id'));
+
+        $this->travel(15)->seconds();
+        $this->asSite($credential)->postJson("/api/connect/v1/jobs/{$oldestJob->id}/status", [
+            'state' => 'submitted',
+        ])->assertOk();
+
+        $secondPoll = $this->asSite($credential)->postJson('/api/connect/v1/poll', $payload)->assertOk();
+        $returnedIds = array_column($secondPoll->json('jobs'), 'id');
+        $this->assertContains($lastJob->id, $returnedIds);
+        $this->assertNotContains($oldestJob->id, $returnedIds);
+    }
+
     public function test_job_document_and_status_are_limited_to_the_assigned_active_site(): void
     {
         [$site, $credential] = $this->site();

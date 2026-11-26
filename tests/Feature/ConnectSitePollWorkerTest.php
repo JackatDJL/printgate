@@ -12,6 +12,7 @@ use App\Printing\PrinterState;
 use App\Printing\PrintJob;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -19,7 +20,7 @@ class ConnectSitePollWorkerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_valid_allowlisted_job_is_submitted_once_and_temporary_document_is_removed(): void
+    public function test_job_retries_after_a_temporary_hub_error_and_prints_only_once(): void
     {
         $this->app->useStoragePath(sys_get_temp_dir().'/printgate-test-'.bin2hex(random_bytes(8)));
         Http::preventStrayRequests();
@@ -32,7 +33,7 @@ class ConnectSitePollWorkerTest extends TestCase
                 'expires_at' => now()->addMinutes(5)->toIso8601String(),
             ]]]),
             'https://hub.test/api/connect/v1/jobs/job-one/document' => Http::response($pdf, 200, ['Content-Type' => 'application/pdf']),
-            'https://hub.test/api/connect/v1/jobs/job-one/status' => Http::response([], 200),
+            'https://hub.test/api/connect/v1/jobs/job-one/status' => Http::sequence()->push([], 503)->whenEmpty(Http::response([], 200)),
         ]);
         $backend = new FakePrintBackend(
             [new Printer('office', 'Office printer', PrinterState::Ready)],
@@ -40,8 +41,16 @@ class ConnectSitePollWorkerTest extends TestCase
         );
         $this->app->instance(PrintBackend::class, $backend);
 
-        $this->app->make(PollWorker::class)->poll();
-        $this->app->make(PollWorker::class)->poll();
+        $worker = $this->app->make(PollWorker::class);
+        try {
+            $worker->poll();
+            $this->fail('The hub should return a temporary error before printing.');
+        } catch (RequestException $exception) {
+            $this->assertSame(503, $exception->response->status());
+        }
+        $this->assertCount(0, $backend->submittedRequests());
+        $worker->poll();
+        $worker->poll();
 
         $this->assertCount(1, $backend->submittedRequests());
         $this->assertFileDoesNotExist($backend->submittedRequests()[0]->documentPath);

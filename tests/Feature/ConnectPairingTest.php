@@ -42,8 +42,10 @@ class ConnectPairingTest extends TestCase
         $claimToken = $claimResponse->json('claim_token');
         $this->assertSame('482901', $claimResponse->json('comparison_code'));
 
-        $this->postJson("https://localhost/api/connect/pairings/{$claimId}/credential", ['claim_token' => $claimToken])
-            ->assertOk()->assertJson(['status' => 'pending']);
+        for ($poll = 0; $poll < 20; $poll++) {
+            $this->postJson("https://localhost/api/connect/pairings/{$claimId}/credential", ['claim_token' => $claimToken])
+                ->assertOk()->assertJson(['status' => 'pending']);
+        }
 
         $this->post("https://localhost/connect/claims/{$claimId}/confirm", ['comparison_code' => '111111'])
             ->assertSessionHasErrors('comparison_code');

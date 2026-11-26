@@ -82,13 +82,14 @@ final class PollWorker
 
                 return;
             }
+            $this->report($configuration, $jobId, 'submitting');
+
             $claimed = ConnectSiteReceipt::query()->whereKey($receipt->id)->where('state', 'queued')->update(['state' => 'submitting']);
             if ($claimed !== 1) {
                 $this->replayOutcome($configuration, $jobId, $receipt->fresh());
 
                 return;
             }
-            $this->report($configuration, $jobId, 'submitting');
             $this->submit($configuration, $job, $printerName, $receipt);
         }
 

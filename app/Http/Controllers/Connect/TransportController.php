@@ -34,8 +34,8 @@ class TransportController extends Controller
         $jobs = $site->connectPrintJobs()
             ->whereIn('state', [ConnectPrintJobState::Queued->value, ConnectPrintJobState::Submitting->value, ConnectPrintJobState::Submitted->value])
             ->where('expires_at', '>', now())
-            ->orderByRaw('case when state = ? then 1 else 0 end', [ConnectPrintJobState::Submitted->value])
-            ->oldest('created_at')
+            ->oldest('updated_at')
+            ->orderBy('id')
             ->limit(20)
             ->get(['id', 'printer_name', 'sha256', 'size', 'expires_at', 'state']);
 
@@ -86,13 +86,9 @@ class TransportController extends Controller
             abort_if($job->expires_at->isPast(), 410);
             abort_unless($job->state->canTransitionTo($next), 409, 'Job status cannot move backwards or leave a terminal state.');
 
-            if ($job->state !== $next || array_key_exists('backend_job_id', $validated)) {
-                $job->state = $next;
-                if (array_key_exists('backend_job_id', $validated) && $validated['backend_job_id'] !== null) {
-                    $job->backend_job_id = $validated['backend_job_id'];
-                }
-                $job->save();
-            }
+            $job->state = $next;
+            $job->backend_job_id = $validated['backend_job_id'] ?? $job->backend_job_id;
+            $job->touch();
 
             return $job;
         });

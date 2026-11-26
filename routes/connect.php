@@ -6,6 +6,7 @@ use App\Http\Controllers\Connect\SiteController;
 use App\Http\Controllers\Connect\TransportController;
 use App\Http\Middleware\AuthenticateConnectSite;
 use App\Http\Middleware\RequireConnectHubRole;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(RequireConnectHubRole::class)->group(function () {
@@ -17,10 +18,10 @@ Route::middleware(RequireConnectHubRole::class)->group(function () {
         Route::post('/sites/{site}/jobs', [PrintJobController::class, 'store'])->name('sites.jobs.store');
     });
 
-    Route::prefix('api/connect')->name('connect.api.')->middleware('throttle:10,1')->group(function () {
-        Route::post('/pairings', [PairingController::class, 'begin'])->name('pairings.begin');
-        Route::post('/pairings/{claim}/credential', [PairingController::class, 'delivery'])->name('pairings.delivery');
-        Route::middleware(AuthenticateConnectSite::class)->get('/site', function (\Illuminate\Http\Request $request) {
+    Route::prefix('api/connect')->name('connect.api.')->group(function () {
+        Route::post('/pairings', [PairingController::class, 'begin'])->middleware('throttle:10,1,connect-pairing-start')->name('pairings.begin');
+        Route::post('/pairings/{claim}/credential', [PairingController::class, 'delivery'])->middleware('throttle:60,1,connect-pairing-delivery')->name('pairings.delivery');
+        Route::middleware(AuthenticateConnectSite::class)->get('/site', function (Request $request) {
             $site = $request->attributes->get('connect.site');
 
             return response()->json([

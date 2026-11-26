@@ -28,6 +28,9 @@
                     <label>Enter the code shown by the site
                         <input name="comparison_code" inputmode="numeric" maxlength="6" required>
                     </label>
+                    @error('comparison_code')
+                        <p role="alert" class="text-sm text-red-700">{{ $message }}</p>
+                    @enderror
                     <button type="submit">Confirm pairing</button>
                 </form>
             @empty
