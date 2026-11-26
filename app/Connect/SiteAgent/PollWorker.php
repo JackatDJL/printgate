@@ -6,6 +6,8 @@ use App\Printing\Contracts\PrintBackend;
 use App\Printing\CupsJobState;
 use App\Printing\Printer;
 use App\Printing\PrintSubmissionRequest;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Throwable;
@@ -139,6 +141,13 @@ final class PollWorker
             $backendJob = $this->backend->submit(new PrintSubmissionRequest($printerName, $path));
             $receipt->update(['state' => 'submitted', 'backend_job_id' => $backendJob->backendJobId]);
         } catch (Throwable $exception) {
+            if (! $submissionStarted && ($exception instanceof ConnectionException
+                || ($exception instanceof RequestException && ($exception->response->serverError() || $exception->response->tooManyRequests())))) {
+                ConnectSiteReceipt::query()->whereKey($receipt->id)->where('state', 'submitting')->update(['state' => 'queued']);
+
+                throw $exception;
+            }
+
             $receipt->update(['state' => $submissionStarted ? 'uncertain' : 'failed']);
             $this->report($configuration, $receipt->remote_job_id, $submissionStarted ? 'uncertain' : 'failed');
 

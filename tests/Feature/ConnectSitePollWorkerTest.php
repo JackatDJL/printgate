@@ -14,26 +14,41 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ConnectSitePollWorkerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_job_retries_after_a_temporary_hub_error_and_prints_only_once(): void
+    /** @return array<string, array{string}> */
+    public static function transientHubFailures(): array
+    {
+        return [
+            'status update' => ['status'],
+            'document transfer' => ['document'],
+        ];
+    }
+
+    #[DataProvider('transientHubFailures')]
+    public function test_job_retries_after_a_temporary_hub_error_and_prints_only_once(string $failedEndpoint): void
     {
         $this->app->useStoragePath(sys_get_temp_dir().'/printgate-test-'.bin2hex(random_bytes(8)));
         Http::preventStrayRequests();
         ConnectSiteReceipt::query()->where('site_id', 'site-test-worker')->delete();
         $this->app->make(CredentialStore::class)->save('https://hub.test', str_repeat('d', 64), 'site-test-worker', ['office']);
         $pdf = '%PDF-1.7 test content';
+        $document = Http::response($pdf, 200, ['Content-Type' => 'application/pdf']);
+        $status = Http::response([], 200);
         Http::fake([
             'https://hub.test/api/connect/v1/poll' => Http::response(['jobs' => [[
                 'id' => 'job-one', 'printer' => 'office', 'sha256' => hash('sha256', $pdf), 'size' => strlen($pdf),
                 'expires_at' => now()->addMinutes(5)->toIso8601String(),
             ]]]),
-            'https://hub.test/api/connect/v1/jobs/job-one/document' => Http::response($pdf, 200, ['Content-Type' => 'application/pdf']),
-            'https://hub.test/api/connect/v1/jobs/job-one/status' => Http::sequence()->push([], 503)->whenEmpty(Http::response([], 200)),
+            'https://hub.test/api/connect/v1/jobs/job-one/document' => $failedEndpoint === 'document'
+                ? Http::sequence()->push([], 503)->whenEmpty($document) : $document,
+            'https://hub.test/api/connect/v1/jobs/job-one/status' => $failedEndpoint === 'status'
+                ? Http::sequence()->push([], 503)->whenEmpty($status) : $status,
         ]);
         $backend = new FakePrintBackend(
             [new Printer('office', 'Office printer', PrinterState::Ready)],
@@ -49,6 +64,11 @@ class ConnectSitePollWorkerTest extends TestCase
             $this->assertSame(503, $exception->response->status());
         }
         $this->assertCount(0, $backend->submittedRequests());
+        $this->assertDatabaseHas('connect_site_agent_receipts', [
+            'site_id' => 'site-test-worker',
+            'remote_job_id' => 'job-one',
+            'state' => 'queued',
+        ]);
         $worker->poll();
         $worker->poll();
 
