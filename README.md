@@ -8,7 +8,18 @@ The project deliberately does **not** expose CUPS itself to the public internet.
 
 ## Status
 
-Early development / planning.
+Printgate supports local PDF printing through CUPS. Printgate Connect adds an opt-in hub for account-based remote printing. The hub and the local print host run separate instances with separate application keys, databases, and private storage.
+
+### Printgate Connect
+
+The Docker Compose example in `deploy/` runs the hub and its retention scheduler. Set `APP_URL` to the hub's HTTPS origin, provide a unique `APP_KEY`, and set `PRINTGATE_TRUSTED_PROXIES` to the immediate proxy's source address or CIDR as seen by the container. The HTTPS proxy must overwrite `X-Forwarded-Proto` and forward to the loopback port in Compose. Provision an account on the hub with `php artisan printgate:user`.
+
+1. Sign in to the hub and create an invitation from the Connect page.
+2. On the CUPS host, run `php artisan connect:site-pair https://hub.example "Home"` and enter the invitation at the prompt. Compare the displayed code with the hub and confirm there.
+3. Publish each intended queue with `php artisan connect:site-allow-printer NAME`. Run `php artisan connect:site-poll` as the local service user. Use `--once` for a single poll.
+4. Choose a reported printer on the hub and upload a PDF. Revoke a site from the hub when it should lose access.
+
+The local instance still serves its own authenticated UI and can use CUPS without the hub. Connect keeps document bytes private and expires remote jobs according to the configured retention period. The host records the job ID before invoking CUPS. If it cannot establish whether CUPS accepted a job, it reports an uncertain result and leaves any decision to print again to the operator.
 
 The implementation roadmap lives in [`ROADMAP.md`](./ROADMAP.md).  
 Copy-pasteable implementation prompts for coding agents live in [`PROMPTS.md`](./PROMPTS.md).

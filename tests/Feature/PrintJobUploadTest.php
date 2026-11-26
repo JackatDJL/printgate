@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\PrintJob;
+use App\Models\User;
 use App\Printing\PrintJobState;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -16,6 +17,9 @@ class PrintJobUploadTest extends TestCase
 
     public function test_creates_a_pending_job_and_stores_a_valid_pdf_privately(): void
     {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
         Storage::fake('printgate-documents');
         $file = UploadedFile::fake()->createWithContent('quarterly-report.pdf', "%PDF-1.4\n%âãÏÓ\n");
 
@@ -28,6 +32,7 @@ class PrintJobUploadTest extends TestCase
         $job = PrintJob::sole();
 
         $this->assertSame(PrintJobState::Pending, $job->state);
+        $this->assertSame($user->id, $job->user_id);
         $this->assertSame('quarterly-report.pdf', $job->original_filename);
         $this->assertNull($job->printer_name);
         $this->assertNull($job->backend_job_id);
@@ -39,6 +44,8 @@ class PrintJobUploadTest extends TestCase
 
     public function test_rejects_a_pdf_that_exceeds_the_configured_maximum_size(): void
     {
+        $this->actingAs(User::factory()->create());
+
         Storage::fake('printgate-documents');
         $file = UploadedFile::fake()
             ->createWithContent('large.pdf', '%PDF-1.4')
@@ -55,6 +62,8 @@ class PrintJobUploadTest extends TestCase
 
     public function test_rejects_a_file_that_is_not_a_pdf(): void
     {
+        $this->actingAs(User::factory()->create());
+
         Storage::fake('printgate-documents');
         $file = UploadedFile::fake()->createWithContent('notes.txt', 'not a PDF');
 
@@ -69,6 +78,8 @@ class PrintJobUploadTest extends TestCase
 
     public function test_uses_a_random_storage_name_and_never_uses_the_client_path(): void
     {
+        $this->actingAs(User::factory()->create());
+
         Storage::fake('printgate-documents');
         $file = UploadedFile::fake()->createWithContent('../../private-report.pdf', '%PDF-1.4');
 
@@ -89,6 +100,8 @@ class PrintJobUploadTest extends TestCase
 
     public function test_assigns_distinct_storage_names_to_uploads_with_the_same_client_filename(): void
     {
+        $this->actingAs(User::factory()->create());
+
         Storage::fake('printgate-documents');
 
         Livewire::test('pages::print-jobs.create')
@@ -108,10 +121,17 @@ class PrintJobUploadTest extends TestCase
 
     public function test_new_print_job_page_does_not_expose_stored_document_paths(): void
     {
+        $this->actingAs(User::factory()->create());
+
         $response = $this->get(route('print-jobs.create'));
 
         $response->assertSee('Upload a PDF');
         $response->assertDontSee('printgate-documents');
         $response->assertDontSee('documents/');
+    }
+
+    public function test_unauthenticated_upload_page_request_redirects_to_login(): void
+    {
+        $this->get(route('print-jobs.create'))->assertRedirect(route('login'));
     }
 }

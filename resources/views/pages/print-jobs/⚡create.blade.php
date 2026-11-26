@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\PrintJob;
+use App\Models\User;
 use App\Printing\Contracts\PrintBackend;
 use App\Printing\Exceptions\PrintBackendUnavailable;
 use App\Printing\Exceptions\PrintSubmissionFailed;
@@ -8,6 +9,7 @@ use App\Printing\Exceptions\PrintValidationFailed;
 use App\Printing\PrintJobState;
 use App\Printing\PrintgateSettings;
 use App\Printing\SubmitPendingPrintJob;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -53,8 +55,18 @@ new #[Layout('components.layouts.app')] class extends Component
         ];
     }
 
+    public function mount(): void
+    {
+        abort_if(config('printgate.role') === 'hub', 404);
+    }
+
     public function save(): void
     {
+        abort_if(config('printgate.role') === 'hub', 404);
+        $user = Auth::user();
+
+        abort_unless($user instanceof User, 403);
+
         $validated = $this->validate();
         $settings = app(PrintgateSettings::class);
         $originalFilename = basename(str_replace('\\', '/', $validated['document']->getClientOriginalName()));
@@ -70,7 +82,7 @@ new #[Layout('components.layouts.app')] class extends Component
         }
 
         try {
-            $job = DB::transaction(fn (): PrintJob => PrintJob::create([
+            $job = DB::transaction(fn (): PrintJob => $user->printJobs()->create([
                 'state' => PrintJobState::Pending,
                 'printer_name' => null,
                 'original_filename' => $originalFilename,
@@ -91,6 +103,8 @@ new #[Layout('components.layouts.app')] class extends Component
 
     public function loadPrinters(PrintBackend $printBackend): void
     {
+        abort_unless(Auth::user() instanceof User, 403);
+
         $this->printerDiscoveryError = null;
 
         try {
@@ -109,12 +123,16 @@ new #[Layout('components.layouts.app')] class extends Component
 
     public function submit(SubmitPendingPrintJob $submitPendingPrintJob): void
     {
+        $user = Auth::user();
+
+        abort_unless($user instanceof User, 403);
+
         $this->validate([
             'selectedPrinterName' => ['required', 'string'],
         ]);
 
         try {
-            $job = $submitPendingPrintJob->submit($this->createdJobId ?? '', $this->selectedPrinterName);
+            $job = $submitPendingPrintJob->submit($user, $this->createdJobId ?? '', $this->selectedPrinterName);
         } catch (PrintValidationFailed $exception) {
             $this->addError('selectedPrinterName', $exception->getMessage());
 
